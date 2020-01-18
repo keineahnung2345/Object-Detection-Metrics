@@ -22,6 +22,8 @@ from BoundingBox import BoundingBox
 from BoundingBoxes import BoundingBoxes
 from Evaluator import *
 from utils import BBFormat
+import magic
+import re
 
 
 # Validate formats
@@ -115,13 +117,22 @@ def getBoundingBoxes(directory,
     for f in files:
         nameOfImage = f.replace(".txt", "")
         fh1 = open(f, "r")
+        # to cope with the condition that images with different sizes
+        fimg = directory.replace("sub_labels", "JPEGImages").replace("lefttop_labels", "JPEGImages").replace("labels", "JPEGImages").replace("trt_lefttop_results", "JPEGImages").replace("FP16_results", "JPEGImages").replace("FP32_results", "JPEGImages").replace("INT8_results", "JPEGImages") + "/" + f.replace(".txt", ".jpg")
+        t = magic.from_file(fimg)
+        try:
+            imgSize = tuple(map(int, re.findall('(\d+)x(\d+)', t)[-1]))
+            #print(imgSize)
+        except:
+            print(directory)
+            print(t)
         for line in fh1:
             line = line.replace("\n", "")
             if line.replace(' ', '') == '':
                 continue
             splitLine = line.split(" ")
             if isGT:
-                # idClass = int(splitLine[0]) #class
+                #idClass = int(splitLine[0]) #class
                 idClass = (splitLine[0])  # class
                 x = float(splitLine[1])
                 y = float(splitLine[2])
@@ -139,13 +150,21 @@ def getBoundingBoxes(directory,
                     BBType.GroundTruth,
                     format=bbFormat)
             else:
-                # idClass = int(splitLine[0]) #class
+                #idClass = int(splitLine[0]) #class
                 idClass = (splitLine[0])  # class
+                """
                 confidence = float(splitLine[1])
                 x = float(splitLine[2])
                 y = float(splitLine[3])
                 w = float(splitLine[4])
                 h = float(splitLine[5])
+                """
+                x = float(splitLine[1])
+                y = float(splitLine[2])
+                w = float(splitLine[3])
+                h = float(splitLine[4])
+                confidence = float(splitLine[5])
+                
                 bb = BoundingBox(
                     nameOfImage,
                     idClass,
@@ -159,6 +178,8 @@ def getBoundingBoxes(directory,
                     confidence,
                     format=bbFormat)
             allBoundingBoxes.addBoundingBox(bb)
+            if idClass == "15":
+                print(f)
             if idClass not in allClasses:
                 allClasses.append(idClass)
         fh1.close()
@@ -299,7 +320,7 @@ os.makedirs(savePath)
 showPlot = args.showPlot
 
 # print('iouThreshold= %f' % iouThreshold)
-# print('savePath = %s' % savePath)
+# print('savePath = %s' % savePath
 # print('gtFormat = %s' % gtFormat)
 # print('detFormat = %s' % detFormat)
 # print('gtFolder = %s' % gtFolder)
@@ -314,7 +335,9 @@ allBoundingBoxes, allClasses = getBoundingBoxes(
 # Get detected boxes
 allBoundingBoxes, allClasses = getBoundingBoxes(
     detFolder, False, detFormat, detCoordType, allBoundingBoxes, allClasses, imgSize=imgSize)
+
 allClasses.sort()
+print("allClasses: ", allClasses)
 
 evaluator = Evaluator()
 acc_AP = 0
